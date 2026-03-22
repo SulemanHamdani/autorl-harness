@@ -10,10 +10,14 @@ This will:
     3. Save the trained model to rocket_ppo.zip
 """
 
+from bootstrap import bootstrap_autorl_paths
+
+bootstrap_autorl_paths()
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
-from rocket_env import RocketLandingEnv
+from tasks.rocket.env import RocketLandingEnv
 
 
 def main():

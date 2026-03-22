@@ -13,10 +13,13 @@ import math
 import random
 import sys
 
+from bootstrap import bootstrap_autorl_paths
 import pygame
 from stable_baselines3 import PPO
 
-from rocket_env import RocketLandingEnv
+bootstrap_autorl_paths()
+
+from tasks.rocket.env import RocketLandingEnv
 
 # ── colours ──────────────────────────────────────────────────────────
 BLACK = (0, 0, 0)

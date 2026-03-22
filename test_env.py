@@ -5,8 +5,12 @@ Sanity-check script for RocketLandingEnv.
 2. Runs a few episodes with random actions so you can watch the physics.
 """
 
+from bootstrap import bootstrap_autorl_paths
+
+bootstrap_autorl_paths()
+
 from gymnasium.utils.env_checker import check_env
-from rocket_env import RocketLandingEnv
+from tasks.rocket.env import RocketLandingEnv
 
 
 def run_env_checker():

@@ -8,8 +8,12 @@ Loads rocket_ppo.zip and runs 5 episodes with render_mode="human"
 so you can see each step printed to the console.
 """
 
+from bootstrap import bootstrap_autorl_paths
+
+bootstrap_autorl_paths()
+
 from stable_baselines3 import PPO
-from rocket_env import RocketLandingEnv
+from tasks.rocket.env import RocketLandingEnv
 
 
 def main():

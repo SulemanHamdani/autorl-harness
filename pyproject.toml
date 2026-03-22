@@ -1,7 +1,7 @@
 [project]
 name = "rocket-science"
 version = "0.1.0"
-description = "Add your description here"
+description = "AutoResearch-inspired reinforcement learning experiment scaffold"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,3 +9,16 @@ dependencies = [
     "pygame>=2.6.1",
     "stable-baselines3>=2.7.1",
 ]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+autorl = "autorl.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "autorl/src"}
+
+[tool.setuptools.packages.find]
+where = ["autorl/src"]
