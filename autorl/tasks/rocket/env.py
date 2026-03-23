@@ -1,9 +1,10 @@
 """
 1D Rocket Landing Environment
 ==============================
-A minimal Gymnasium environment that simulates a rocket descending
-vertically under gravity. The agent controls a single thruster
-(on / off) and must land softly (|velocity| < safe_velocity).
+A Gymnasium environment that simulates a rocket descending vertically
+under gravity. The agent controls a continuous throttle and must land
+softly (|velocity| < safe_velocity) across a wide range of initial
+conditions.
 
 State : [z, v, fuel, mass]
 Action: Box(1,) - continuous throttle from 0.0 to 1.0
@@ -19,27 +20,47 @@ from reward import compute_shaping_reward, compute_terminal_reward
 
 
 class RocketLandingEnv(gym.Env):
-    """Reference rocket landing environment used by the scaffold."""
 
     metadata = {"render_modes": ["human"], "render_fps": 10}
 
-    def __init__(self, render_mode=None):
+    # ---- physics (fixed) ----
+    GRAVITY = 9.8
+    THRUST_FORCE = 400.0
+    FUEL_CONSUMPTION = 1.0
+    DRY_MASS = 10.0
+    DT = 0.1
+    SAFE_VELOCITY = 5.0
+    MAX_ALTITUDE = 500.0
+    MAX_STEPS = 500
+
+    # ---- initial condition ranges (wide for generalization) ----
+    ALTITUDE_RANGE = (10.0, 490.0)
+    VELOCITY_RANGE = (-30.0, 10.0)
+    FUEL_RANGE = (5.0, 30.0)
+
+    def __init__(self, render_mode=None, scenario=None):
+        """
+        Args:
+            scenario: optional dict with keys {altitude, velocity, fuel}
+                      to override random initial conditions (used for eval).
+        """
         super().__init__()
 
-        # ---- physics constants ----
-        self.gravity = 9.8
-        self.thrust_force = 400.0
-        self.fuel_consumption = 1.0
-        self.dry_mass = 10.0
-        self.initial_fuel = 20.0
-        self.dt = 0.1
-        self.max_steps = 500
-        self.safe_velocity = 5.0
-        self.max_altitude = 500.0
+        self.gravity = self.GRAVITY
+        self.thrust_force = self.THRUST_FORCE
+        self.fuel_consumption = self.FUEL_CONSUMPTION
+        self.dry_mass = self.DRY_MASS
+        self.dt = self.DT
+        self.safe_velocity = self.SAFE_VELOCITY
+        self.max_altitude = self.MAX_ALTITUDE
+        self.max_steps = self.MAX_STEPS
 
+        self.scenario = scenario
+
+        max_fuel = self.FUEL_RANGE[1]
         obs_low = np.array([0.0, -np.inf, 0.0, self.dry_mass], dtype=np.float32)
         obs_high = np.array(
-            [self.max_altitude, np.inf, self.initial_fuel, self.dry_mass + self.initial_fuel],
+            [self.max_altitude, np.inf, max_fuel, self.dry_mass + max_fuel],
             dtype=np.float32,
         )
         self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
@@ -50,7 +71,6 @@ class RocketLandingEnv(gym.Env):
         )
 
         self.render_mode = render_mode
-
         self.z = 0.0
         self.v = 0.0
         self.fuel = 0.0
@@ -60,9 +80,15 @@ class RocketLandingEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        self.z = self.np_random.uniform(50.0, 400.0)
-        self.v = self.np_random.uniform(-5.0, 5.0)
-        self.fuel = self.initial_fuel
+        if self.scenario is not None:
+            self.z = float(self.scenario["altitude"])
+            self.v = float(self.scenario["velocity"])
+            self.fuel = float(self.scenario["fuel"])
+        else:
+            self.z = self.np_random.uniform(*self.ALTITUDE_RANGE)
+            self.v = self.np_random.uniform(*self.VELOCITY_RANGE)
+            self.fuel = self.np_random.uniform(*self.FUEL_RANGE)
+
         self.mass = self.dry_mass + self.fuel
         self.steps = 0
 

@@ -1,16 +1,8 @@
 task_id: rocket
-description: 1D rocket landing reference task
-supported_algorithms:
-  - ppo
-default_budget:
-  total_timesteps: 500000
-  eval_freq: 5000
-  n_eval_episodes: 10
+description: 1D rocket landing — train a PPO agent that lands softly across diverse initial conditions.
+run_command: "cd autorl/tasks/rocket && uv run python train.py"
 editable_files:
-  - autorl/tasks/rocket/spec.yaml
+  - autorl/tasks/rocket/train.py
   - autorl/tasks/rocket/reward.py
+  - autorl/tasks/rocket/env.py
 primary_score: soft_landing_rate
-guardrails:
-  - crash_rate
-  - timeout_rate
-  - invalid_run

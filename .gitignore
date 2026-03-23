@@ -17,3 +17,4 @@ best_model/
 best_model_v2/
 rocket_ppo*.zip
 *.egg-info/
+.env

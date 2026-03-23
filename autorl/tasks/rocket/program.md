@@ -1,52 +1,43 @@
-# Rocket Landing — AutoRL Program
+# Rocket Landing — Generalization Experiment
 
-You are an autonomous RL researcher. Your goal is to maximize `soft_landing_rate` for a 1D rocket landing task.
+You are an autonomous RL researcher. Your goal is to build a PPO agent that can **land a 1D rocket softly across a wide range of initial conditions**.
 
-## Setup
+## The challenge
 
-The task directory is `autorl/tasks/rocket/`. Read these files for full context:
+The environment randomizes initial altitude (10–490m), velocity (-30 to +10 m/s), and fuel (5–30 kg) during training. The agent must learn a general landing policy, not memorize one trajectory.
 
-- `env.py` — the Gymnasium environment. You can modify physics, observations, action space.
-- `train.py` — the training script you modify. PPO agent, hyperparameters, evaluation.
-- `reward.py` — the reward function you modify. Shaping reward and terminal reward.
-- `spec.yaml` — task metadata. Read-only.
-- `results.tsv` — experiment history. Read-only (the loop appends to it).
+Evaluation uses 15 **fixed scenarios** spanning easy, medium, hard, low-fuel, and edge cases. The primary score is `soft_landing_rate` — the fraction of these 15 scenarios where the rocket lands with |velocity| < 5.0 m/s. **Target: ≥ 0.90.**
 
-## What you CAN do
+## Files
 
-- Modify `train.py` — hyperparameters, network architecture, training loop, evaluation, anything.
-- Modify `reward.py` — reward shaping, terminal rewards, add new reward components.
-- Modify `env.py` — environment physics, observation space, action space.
+- `env.py` — the Gymnasium environment. Defines physics, observation/action spaces, initial condition randomization. **Editable.**
+- `train.py` — training script + fixed evaluation suite. **Editable.**
+- `reward.py` — reward shaping and terminal rewards. **Editable.**
+- `spec.yaml` — task metadata. **Read-only.**
+- `results.tsv` — experiment history. **Read-only** (the loop appends to it).
 
-## What you CANNOT do
-- Install new packages. Use only what's in `pyproject.toml`.
-- Modify the evaluation logic to fake better metrics.
+## What to try
 
-## The goal
+These are directions, not an ordered checklist. Use your judgment based on results.
 
-**Maximize `soft_landing_rate`.** This is the fraction of evaluation episodes where the rocket lands with |velocity| < 5.0 m/s. Higher is better. Target: ≥ 0.95.
+- **Reward shaping** — the current reward is basic. Consider velocity-dependent shaping, fuel-efficiency bonuses, altitude-aware penalties. This is often the highest-leverage edit.
+- **Hyperparameters** — learning rate, gamma, GAE lambda, network size, n_steps, batch_size.
+- **Observation normalization** — raw values span very different scales (altitude 0–500, velocity -30 to +10, fuel 5–30). Normalizing or using VecNormalize may help.
+- **Curriculum learning** — start with easy scenarios (low altitude, slow descent), widen over training.
+- **Training budget** — you can increase TOTAL_TIMESTEPS if 500K isn't enough. Be aware this increases wall clock time.
+- **Network architecture** — policy_kwargs for larger/deeper networks.
 
-## Other metrics to watch
+## Constraints
 
-- `crash_rate` — should decrease as soft_landing_rate increases
-- `timeout_rate` — episodes that ran out of steps, should be low
-- `mean_return` — total reward, useful signal but not the primary score
-- `mean_touchdown_velocity` — lower means softer landings
+- Only use packages in `pyproject.toml`.
+- Do NOT modify the evaluation scenarios or fake metrics.
+- Do NOT modify `spec.yaml`.
 
-## Guidelines
+## Rules
 
-- **Small edits.** Change one thing at a time so you can isolate what works.
-- **Read results.tsv** before each edit to understand what's been tried and what worked.
-- **If the last experiment made things worse**, revert with `git reset --hard HEAD~1` before making your next edit.
-- **If the last experiment improved**, build on it.
-- **Commit your changes** with a short descriptive message before the experiment runs.
-- **Don't over-engineer.** A simple hyperparameter tweak that works beats a complex architectural change that doesn't.
-- **Reward shaping matters.** The reward function in `reward.py` is often the highest-leverage edit.
-
-## The first run
-
-Your very first run establishes the baseline. The loop handles this — no edits needed.
-
-## After that
-
-Look at results.tsv, decide what to try, edit the files, commit, and the loop will run the experiment for you.
+- **One idea per experiment.** Keep edits small and targeted.
+- **Read results.tsv** before editing. Understand what worked and what didn't.
+- **Read `metrics.json`** for the per-scenario breakdown — it tells you exactly which scenarios fail.
+- **If the last experiment regressed**, revert with `git reset --hard HEAD~1`.
+- **If it improved**, build on it.
+- **Commit your changes** with a short message before the loop runs training.

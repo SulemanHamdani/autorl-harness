@@ -21,18 +21,21 @@ Read the context below, then edit the editable files to improve the primary scor
 
 ## Previous Run Log
 
-The full output from the last experiment is at `{{TASK_DIR}}/run.log`. Read it if you need to understand what happened (crashes, training progress, errors, etc.)
+The full output from the last experiment is at `{{TASK_DIR}}/run.log`. Read it if you need to understand training progress, crashes, or errors.
+
+The per-scenario evaluation breakdown is at `{{TASK_DIR}}/metrics.json`. Read it to see exactly which scenarios pass and fail.
 
 ## Instructions
 
 1. Read the experiment history above. Understand what has been tried and what worked.
-2. If needed, read `{{TASK_DIR}}/run.log` for details on the last run.
-3. If the last experiment made things worse, run: `git reset --hard HEAD~1`
-4. Edit the editable files to try something new that should improve `{{PRIMARY_SCORE}}`.
-5. Keep edits small and targeted — one idea per experiment.
-6. When done editing, commit your changes:
+2. Read `{{TASK_DIR}}/metrics.json` for per-scenario results from the last run.
+3. If needed, read `{{TASK_DIR}}/run.log` for training details.
+4. If the last experiment made things worse, run: `git reset --hard HEAD~1`
+5. Edit the editable files to try something new that should improve `{{PRIMARY_SCORE}}`.
+6. Keep edits small and targeted — one idea per experiment.
+7. When done editing, stage and commit ONLY the editable files:
    ```
-   git add -A && git commit -m "short description of what you changed"
+   git add autorl/tasks/rocket/train.py autorl/tasks/rocket/reward.py autorl/tasks/rocket/env.py && git commit -m "short description of what you changed"
    ```
-7. Do NOT run the training script — the loop handles that after you exit.
-8. Do NOT modify any files outside the editable files list.
+8. Do NOT run the training script — the loop handles that after you exit.
+9. Do NOT modify any files outside the editable files list.
