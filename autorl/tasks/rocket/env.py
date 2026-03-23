@@ -6,7 +6,7 @@ vertically under gravity. The agent controls a single thruster
 (on / off) and must land softly (|velocity| < safe_velocity).
 
 State : [z, v, fuel, mass]
-Action: Discrete(2) - 0 = engine off, 1 = thrust
+Action: Box(1,) - continuous throttle from 0.0 to 1.0
 """
 
 from __future__ import annotations
@@ -43,7 +43,11 @@ class RocketLandingEnv(gym.Env):
             dtype=np.float32,
         )
         self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Box(
+            low=np.array([0.0], dtype=np.float32),
+            high=np.array([1.0], dtype=np.float32),
+            dtype=np.float32,
+        )
 
         self.render_mode = render_mode
 
@@ -68,11 +72,13 @@ class RocketLandingEnv(gym.Env):
         return self._get_obs(), {}
 
     def step(self, action):
-        if action == 1 and self.fuel > 0:
-            fuel_used = min(self.fuel, self.fuel_consumption * self.dt)
+        throttle = float(np.clip(np.asarray(action, dtype=np.float32).item(), 0.0, 1.0))
+
+        if throttle > 0.0 and self.fuel > 0:
+            fuel_used = min(self.fuel, throttle * self.fuel_consumption * self.dt)
             self.fuel -= fuel_used
             self.mass -= fuel_used
-            acceleration = (self.thrust_force / self.mass) - self.gravity
+            acceleration = (throttle * self.thrust_force / self.mass) - self.gravity
         else:
             acceleration = -self.gravity
 
