@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+# runtime artifacts
+autorl/tasks/*/metrics.json
+autorl/tasks/*/model.zip
+autorl/tasks/*/run.log
+autorl/tasks/*/results.tsv
+best_model/
+best_model_v2/
+rocket_ppo*.zip
+*.egg-info/

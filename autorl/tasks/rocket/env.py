@@ -15,7 +15,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-from tasks.rocket.reward import compute_shaping_reward, compute_terminal_reward
+from reward import compute_shaping_reward, compute_terminal_reward
 
 
 class RocketLandingEnv(gym.Env):
