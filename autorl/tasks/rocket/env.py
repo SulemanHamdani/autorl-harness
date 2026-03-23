@@ -6,7 +6,7 @@ under gravity. The agent controls a continuous throttle and must land
 softly (|velocity| < safe_velocity) across a wide range of initial
 conditions.
 
-State : [z, v, fuel, mass]
+State : normalized [altitude, velocity, fuel, mass] in roughly [-1, 1]
 Action: Box(1,) - continuous throttle from 0.0 to 1.0
 """
 
@@ -32,6 +32,7 @@ class RocketLandingEnv(gym.Env):
     SAFE_VELOCITY = 5.0
     MAX_ALTITUDE = 500.0
     MAX_STEPS = 500
+    OBS_VELOCITY_SCALE = 50.0
 
     # ---- initial condition ranges (wide for generalization) ----
     ALTITUDE_RANGE = (10.0, 490.0)
@@ -58,11 +59,9 @@ class RocketLandingEnv(gym.Env):
         self.scenario = scenario
 
         max_fuel = self.FUEL_RANGE[1]
-        obs_low = np.array([0.0, -np.inf, 0.0, self.dry_mass], dtype=np.float32)
-        obs_high = np.array(
-            [self.max_altitude, np.inf, max_fuel, self.dry_mass + max_fuel],
-            dtype=np.float32,
-        )
+        self.max_fuel = max_fuel
+        obs_low = np.full(4, -1.0, dtype=np.float32)
+        obs_high = np.full(4, 1.0, dtype=np.float32)
         self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
         self.action_space = spaces.Box(
             low=np.array([0.0], dtype=np.float32),
@@ -112,7 +111,12 @@ class RocketLandingEnv(gym.Env):
         self.z += self.v * self.dt
         self.steps += 1
 
-        reward = compute_shaping_reward(self.z, self.v)
+        reward = compute_shaping_reward(
+            altitude=self.z,
+            velocity=self.v,
+            safe_velocity=self.safe_velocity,
+            max_altitude=self.max_altitude,
+        )
         terminated = False
         truncated = False
 
@@ -139,7 +143,12 @@ class RocketLandingEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, {}
 
     def _get_obs(self):
-        return np.array([self.z, self.v, self.fuel, self.mass], dtype=np.float32)
+        # Normalize broad state ranges so PPO sees comparable feature scales.
+        altitude = (2.0 * (self.z / self.max_altitude)) - 1.0
+        velocity = np.clip(self.v / self.OBS_VELOCITY_SCALE, -1.0, 1.0)
+        fuel = (2.0 * (self.fuel / self.max_fuel)) - 1.0
+        mass = (2.0 * (self.mass / (self.dry_mass + self.max_fuel))) - 1.0
+        return np.array([altitude, velocity, fuel, mass], dtype=np.float32)
 
     def render(self):
         print(

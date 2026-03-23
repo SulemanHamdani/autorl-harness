@@ -68,7 +68,8 @@ run_and_log() {
     local desc_override="${2:-}"
 
     echo "  Running: $RUN_COMMAND"
-    if eval "$RUN_COMMAND" > "$TASK_DIR/run.log" 2>&1; then
+    # Run in a subshell so `cd` in RUN_COMMAND doesn't change our cwd
+    if (cd "$REPO_ROOT" && eval "$RUN_COMMAND") > "$TASK_DIR/run.log" 2>&1; then
         local score crash_rate
         score=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json'))['$PRIMARY_SCORE'])")
         crash_rate=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json')).get('crash_rate', 0.0))")
@@ -161,6 +162,15 @@ for i in $(seq 1 "$ITERATIONS"); do
     echo "[$i/$ITERATIONS] Calling $PROVIDER for experiment..."
 
     call_llm
+
+    # The LLM edits files but may not be able to commit (sandbox restrictions).
+    # We handle the commit here if there are uncommitted changes to editable files.
+    if ! git diff --quiet -- $EDITABLE_FILES 2>/dev/null; then
+        local desc
+        desc=$(git log -1 --format=%s 2>/dev/null || echo "experiment $i")
+        git add $EDITABLE_FILES
+        git commit -m "experiment $i" --allow-empty-message 2>/dev/null || true
+    fi
 
     echo "  Running experiment..."
     run_and_log

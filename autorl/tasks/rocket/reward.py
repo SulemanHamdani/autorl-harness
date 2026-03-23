@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 
-def compute_shaping_reward(altitude: float, velocity: float) -> float:
+def compute_shaping_reward(
+    altitude: float,
+    velocity: float,
+    safe_velocity: float,
+    max_altitude: float,
+) -> float:
     """Dense shaping reward used during descent."""
 
-    return -abs(velocity) * 0.01 - altitude * 0.01
+    clipped_altitude = min(max(altitude, 0.0), max_altitude)
+    altitude_ratio = clipped_altitude / max_altitude
+    target_speed = (0.5 * safe_velocity) + (15.0 * altitude_ratio**0.5)
+    target_velocity = -target_speed
+    velocity_error = abs(velocity - target_velocity)
+    rising_penalty = max(velocity, 0.0)
+
+    return -0.03 * velocity_error - 0.002 * clipped_altitude - 0.02 * rising_penalty
 
 
 def compute_terminal_reward(

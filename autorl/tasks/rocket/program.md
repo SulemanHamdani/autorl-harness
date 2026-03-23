@@ -25,7 +25,6 @@ These are directions, not an ordered checklist. Use your judgment based on resul
 - **Observation normalization** — raw values span very different scales (altitude 0–500, velocity -30 to +10, fuel 5–30). Normalizing or using VecNormalize may help.
 - **Curriculum learning** — start with easy scenarios (low altitude, slow descent), widen over training.
 - **Training budget** — you can increase TOTAL_TIMESTEPS if 500K isn't enough. Be aware this increases wall clock time.
-- **Network architecture** — policy_kwargs for larger/deeper networks.
 
 ## Constraints
 

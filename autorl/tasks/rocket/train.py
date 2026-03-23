@@ -24,13 +24,13 @@ from env import RocketLandingEnv
 
 # ---- configuration ----
 
-TOTAL_TIMESTEPS = 500_000
+TOTAL_TIMESTEPS = 750_000
 SEED = 0
 
 HYPERPARAMETERS = {
     "learning_rate": 3e-4,
     "n_steps": 2048,
-    "batch_size": 64,
+    "batch_size": 256,
     "n_epochs": 10,
     "gamma": 0.99,
 }
@@ -118,7 +118,10 @@ def evaluate(model) -> dict:
             total_reward += float(reward)
             steps += 1
 
-        altitude, velocity, fuel, _ = obs.tolist()
+        # Evaluation metrics should use physical state, not normalized observations.
+        altitude = env.z
+        velocity = env.v
+        fuel = env.fuel
         touched_down = terminated and altitude <= 0.0
         success = touched_down and abs(velocity) < env.safe_velocity
         crash = touched_down and not success

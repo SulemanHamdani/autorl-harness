@@ -33,9 +33,6 @@ The per-scenario evaluation breakdown is at `{{TASK_DIR}}/metrics.json`. Read it
 4. If the last experiment made things worse, run: `git reset --hard HEAD~1`
 5. Edit the editable files to try something new that should improve `{{PRIMARY_SCORE}}`.
 6. Keep edits small and targeted — one idea per experiment.
-7. When done editing, stage and commit ONLY the editable files:
-   ```
-   git add autorl/tasks/rocket/train.py autorl/tasks/rocket/reward.py autorl/tasks/rocket/env.py && git commit -m "short description of what you changed"
-   ```
+7. Do NOT commit — the loop handles git commits automatically after you exit.
 8. Do NOT run the training script — the loop handles that after you exit.
 9. Do NOT modify any files outside the editable files list.
