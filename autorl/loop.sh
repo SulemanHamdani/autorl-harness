@@ -57,7 +57,7 @@ echo "==================="
 
 RESULTS_FILE="$TASK_DIR/results.tsv"
 if [ ! -f "$RESULTS_FILE" ]; then
-    printf "commit\t%s\tcrash_rate\tstatus\tdescription\n" "$PRIMARY_SCORE" > "$RESULTS_FILE"
+    printf "commit\t%s\tstatus\tdescription\n" "$PRIMARY_SCORE" > "$RESULTS_FILE"
 fi
 
 # ---- create logs directory ----
@@ -81,15 +81,14 @@ run_and_log() {
     if (cd "$REPO_ROOT" && eval "$RUN_COMMAND") > "$log_file" 2>&1; then
         # Also copy to run.log so the LLM can find it at the expected path
         cp "$log_file" "$TASK_DIR/run.log"
-        local score crash_rate
+        local score
         score=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json'))['$PRIMARY_SCORE'])")
-        crash_rate=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json')).get('crash_rate', 0.0))")
         local commit desc status
         commit=$(git rev-parse --short HEAD)
         desc="${desc_override:-$(git log -1 --format=%s)}"
         status="${status_override:-keep}"
-        printf "%s\t%s\t%s\t%s\t%s\n" "$commit" "$score" "$crash_rate" "$status" "$desc" >> "$RESULTS_FILE"
-        echo "  Score: $PRIMARY_SCORE=$score  crash_rate=$crash_rate  [$status]"
+        printf "%s\t%s\t%s\t%s\n" "$commit" "$score" "$status" "$desc" >> "$RESULTS_FILE"
+        echo "  Score: $PRIMARY_SCORE=$score  [$status]"
         return 0
     else
         cp "$log_file" "$TASK_DIR/run.log"

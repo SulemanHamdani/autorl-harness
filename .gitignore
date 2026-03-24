@@ -1,21 +1,21 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
 .venv
-# runtime artifacts
+
+# Runtime artifacts (generated per experiment run)
 autorl/tasks/*/metrics.json
 autorl/tasks/*/model.zip
 autorl/tasks/*/run.log
 autorl/tasks/*/logs/
 autorl/tasks/*/results.tsv
-best_model/
-best_model_v2/
-rocket_ppo*.zip
-*.egg-info/
+
+# Editor / tool settings
+.claude/
 .env

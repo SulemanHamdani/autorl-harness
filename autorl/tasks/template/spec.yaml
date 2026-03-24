@@ -1,0 +1,14 @@
+# Task specification — read by loop.sh to run your experiment.
+#
+# task_id:       short identifier, matches the folder name
+# description:   one line describing what this task is
+# run_command:   shell command that runs training and writes metrics.json
+# editable_files: paths (relative to repo root) the LLM is allowed to edit
+# primary_score: key in metrics.json that is the optimization target
+
+task_id: template
+description: describe your task here
+run_command: "uv run python autorl/tasks/template/train.py"
+editable_files:
+  - autorl/tasks/template/train.py
+primary_score: your_metric_name

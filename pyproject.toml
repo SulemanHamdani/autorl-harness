@@ -1,24 +1,15 @@
 [project]
-name = "rocket-science"
+name = "autorl-harness"
 version = "0.1.0"
-description = "AutoResearch-inspired reinforcement learning experiment scaffold"
+description = "Autonomous RL experiment loop powered by an LLM agent"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "gymnasium>=1.2.3",
-    "pygame>=2.6.1",
+    "pyyaml>=6.0",
     "stable-baselines3>=2.7.1",
 ]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
-
-[project.scripts]
-autorl = "autorl.cli:main"
-
-[tool.setuptools]
-package-dir = {"" = "autorl/src"}
-
-[tool.setuptools.packages.find]
-where = ["autorl/src"]
