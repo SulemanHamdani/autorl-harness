@@ -12,6 +12,7 @@ wheels/
 autorl/tasks/*/metrics.json
 autorl/tasks/*/model.zip
 autorl/tasks/*/run.log
+autorl/tasks/*/logs/
 autorl/tasks/*/results.tsv
 best_model/
 best_model_v2/

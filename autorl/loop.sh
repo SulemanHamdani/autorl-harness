@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
+# NOTE: no -e — we handle errors explicitly so one bad iteration doesn't kill the loop.
 
 # ============================================================================
 # autorl loop — Karpathy-style autonomous experiment loop
@@ -59,6 +60,11 @@ if [ ! -f "$RESULTS_FILE" ]; then
     printf "commit\t%s\tcrash_rate\tstatus\tdescription\n" "$PRIMARY_SCORE" > "$RESULTS_FILE"
 fi
 
+# ---- create logs directory ----
+
+LOGS_DIR="$TASK_DIR/logs"
+mkdir -p "$LOGS_DIR"
+
 cd "$REPO_ROOT"
 
 # ---- helper: run experiment and log results ----
@@ -66,10 +72,15 @@ cd "$REPO_ROOT"
 run_and_log() {
     local status_override="${1:-}"
     local desc_override="${2:-}"
+    local iteration="${3:-0}"
+    local log_file="$LOGS_DIR/run_$(printf '%03d' "$iteration").log"
 
     echo "  Running: $RUN_COMMAND"
+    echo "  Log: $log_file"
     # Run in a subshell so `cd` in RUN_COMMAND doesn't change our cwd
-    if (cd "$REPO_ROOT" && eval "$RUN_COMMAND") > "$TASK_DIR/run.log" 2>&1; then
+    if (cd "$REPO_ROOT" && eval "$RUN_COMMAND") > "$log_file" 2>&1; then
+        # Also copy to run.log so the LLM can find it at the expected path
+        cp "$log_file" "$TASK_DIR/run.log"
         local score crash_rate
         score=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json'))['$PRIMARY_SCORE'])")
         crash_rate=$(uv run python3 -c "import json; print(json.load(open('$TASK_DIR/metrics.json')).get('crash_rate', 0.0))")
@@ -79,12 +90,31 @@ run_and_log() {
         status="${status_override:-keep}"
         printf "%s\t%s\t%s\t%s\t%s\n" "$commit" "$score" "$crash_rate" "$status" "$desc" >> "$RESULTS_FILE"
         echo "  Score: $PRIMARY_SCORE=$score  crash_rate=$crash_rate  [$status]"
+        return 0
     else
+        cp "$log_file" "$TASK_DIR/run.log"
         local commit desc
         commit=$(git rev-parse --short HEAD)
         desc="${desc_override:-$(git log -1 --format=%s)}"
         printf "%s\t0.0\t0.0\tcrash\t%s\n" "$commit" "$desc" >> "$RESULTS_FILE"
-        echo "  CRASHED — see $TASK_DIR/run.log"
+        echo "  CRASHED — see $log_file"
+        return 1
+    fi
+}
+
+# ---- helper: try to commit editable files if changed ----
+# Returns 0 if changes were committed, 1 if no changes.
+
+try_commit() {
+    local iteration="$1"
+    if ! git diff --quiet -- $EDITABLE_FILES 2>/dev/null; then
+        git add $EDITABLE_FILES
+        git commit -m "experiment $iteration" 2>/dev/null || true
+        echo "  Committed changes for experiment $iteration"
+        return 0
+    else
+        echo "  No file changes detected"
+        return 1
     fi
 }
 
@@ -136,24 +166,26 @@ call_llm() {
     prompt_file=$(mktemp)
     build_prompt > "$prompt_file"
 
+    local rc=0
     if [ "$PROVIDER" = "claude" ]; then
-        claude -p --allowedTools "Edit,Read,Bash(git:*)" < "$prompt_file"
+        claude -p --allowedTools "Edit,Read,Bash(git:*)" < "$prompt_file" || rc=$?
     elif [ "$PROVIDER" = "codex" ]; then
-        codex exec "$(cat "$prompt_file")"
+        codex exec < "$prompt_file" || rc=$?
     else
         echo "Error: Unknown provider '$PROVIDER'. Use 'claude' or 'codex'."
         rm -f "$prompt_file"
-        exit 1
+        return 1
     fi
 
     rm -f "$prompt_file"
+    return $rc
 }
 
 # ---- iteration 0: baseline ----
 
 echo ""
 echo "[0/$ITERATIONS] Baseline run (no edits)"
-run_and_log "keep" "baseline"
+run_and_log "keep" "baseline" 0
 
 # ---- main loop ----
 
@@ -161,19 +193,18 @@ for i in $(seq 1 "$ITERATIONS"); do
     echo ""
     echo "[$i/$ITERATIONS] Calling $PROVIDER for experiment..."
 
-    call_llm
+    if ! call_llm; then
+        echo "  WARNING: LLM call failed, skipping this iteration"
+        continue
+    fi
 
-    # The LLM edits files but may not be able to commit (sandbox restrictions).
-    # We handle the commit here if there are uncommitted changes to editable files.
-    if ! git diff --quiet -- $EDITABLE_FILES 2>/dev/null; then
-        local desc
-        desc=$(git log -1 --format=%s 2>/dev/null || echo "experiment $i")
-        git add $EDITABLE_FILES
-        git commit -m "experiment $i" --allow-empty-message 2>/dev/null || true
+    if ! try_commit "$i"; then
+        echo "  Skipping training — no new changes"
+        continue
     fi
 
     echo "  Running experiment..."
-    run_and_log
+    run_and_log "" "" "$i"
 done
 
 echo ""
