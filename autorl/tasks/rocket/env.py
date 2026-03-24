@@ -38,10 +38,18 @@ class RocketLandingEnv(gym.Env):
     ALTITUDE_RANGE = (10.0, 490.0)
     VELOCITY_RANGE = (-30.0, 10.0)
     FUEL_RANGE = (5.0, 30.0)
+    CURRICULUM_EPISODES = 2500
+    CURRICULUM_ALTITUDE_RANGE = (40.0, 180.0)
+    CURRICULUM_VELOCITY_RANGE = (-12.0, 2.0)
+    CURRICULUM_FUEL_RANGE = (18.0, 30.0)
     LOW_FUEL_EPISODE_PROB = 0.35
+    LOW_FUEL_EPISODE_PROB_START = 0.1
     LOW_FUEL_ALTITUDE_RANGE = (50.0, 400.0)
     LOW_FUEL_VELOCITY_RANGE = (-12.0, 2.0)
     LOW_FUEL_RANGE = (5.0, 12.0)
+    CURRICULUM_LOW_FUEL_ALTITUDE_RANGE = (60.0, 180.0)
+    CURRICULUM_LOW_FUEL_VELOCITY_RANGE = (-8.0, 0.0)
+    CURRICULUM_LOW_FUEL_RANGE = (8.0, 18.0)
 
     def __init__(self, render_mode=None, scenario=None):
         """
@@ -79,6 +87,7 @@ class RocketLandingEnv(gym.Env):
         self.fuel = 0.0
         self.mass = 0.0
         self.steps = 0
+        self.training_resets = 0
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -89,6 +98,7 @@ class RocketLandingEnv(gym.Env):
             self.fuel = float(self.scenario["fuel"])
         else:
             self.z, self.v, self.fuel = self._sample_training_state()
+            self.training_resets += 1
 
         self.mass = self.dry_mass + self.fuel
         self.steps = 0
@@ -99,18 +109,58 @@ class RocketLandingEnv(gym.Env):
         return self._get_obs(), {}
 
     def _sample_training_state(self):
-        """Bias a fraction of training episodes toward the low-fuel regime."""
+        """Gradually widen the training distribution over the first resets."""
 
-        if self.np_random.random() < self.LOW_FUEL_EPISODE_PROB:
-            altitude = self.np_random.uniform(*self.LOW_FUEL_ALTITUDE_RANGE)
-            velocity = self.np_random.uniform(*self.LOW_FUEL_VELOCITY_RANGE)
-            fuel = self.np_random.uniform(*self.LOW_FUEL_RANGE)
+        progress = min(self.training_resets / self.CURRICULUM_EPISODES, 1.0)
+
+        altitude_range = self._interpolate_range(
+            self.CURRICULUM_ALTITUDE_RANGE, self.ALTITUDE_RANGE, progress
+        )
+        velocity_range = self._interpolate_range(
+            self.CURRICULUM_VELOCITY_RANGE, self.VELOCITY_RANGE, progress
+        )
+        fuel_range = self._interpolate_range(
+            self.CURRICULUM_FUEL_RANGE, self.FUEL_RANGE, progress
+        )
+        low_fuel_probability = (
+            self.LOW_FUEL_EPISODE_PROB_START
+            + progress * (self.LOW_FUEL_EPISODE_PROB - self.LOW_FUEL_EPISODE_PROB_START)
+        )
+
+        if self.np_random.random() < low_fuel_probability:
+            altitude = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_LOW_FUEL_ALTITUDE_RANGE,
+                    self.LOW_FUEL_ALTITUDE_RANGE,
+                    progress,
+                )
+            )
+            velocity = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_LOW_FUEL_VELOCITY_RANGE,
+                    self.LOW_FUEL_VELOCITY_RANGE,
+                    progress,
+                )
+            )
+            fuel = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_LOW_FUEL_RANGE,
+                    self.LOW_FUEL_RANGE,
+                    progress,
+                )
+            )
             return altitude, velocity, fuel
 
-        altitude = self.np_random.uniform(*self.ALTITUDE_RANGE)
-        velocity = self.np_random.uniform(*self.VELOCITY_RANGE)
-        fuel = self.np_random.uniform(*self.FUEL_RANGE)
+        altitude = self.np_random.uniform(*altitude_range)
+        velocity = self.np_random.uniform(*velocity_range)
+        fuel = self.np_random.uniform(*fuel_range)
         return altitude, velocity, fuel
+
+    @staticmethod
+    def _interpolate_range(start_range, end_range, progress):
+        low = (1.0 - progress) * start_range[0] + progress * end_range[0]
+        high = (1.0 - progress) * start_range[1] + progress * end_range[1]
+        return low, high
 
     def step(self, action):
         throttle = float(np.clip(np.asarray(action, dtype=np.float32).item(), 0.0, 1.0))
