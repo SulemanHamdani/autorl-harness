@@ -50,6 +50,14 @@ class RocketLandingEnv(gym.Env):
     CURRICULUM_LOW_FUEL_ALTITUDE_RANGE = (60.0, 180.0)
     CURRICULUM_LOW_FUEL_VELOCITY_RANGE = (-8.0, 0.0)
     CURRICULUM_LOW_FUEL_RANGE = (8.0, 18.0)
+    HIGH_ALTITUDE_EPISODE_PROB = 0.15
+    HIGH_ALTITUDE_EPISODE_PROB_START = 0.05
+    HIGH_ALTITUDE_RANGE = (320.0, 490.0)
+    HIGH_ALTITUDE_VELOCITY_RANGE = (-20.0, 10.0)
+    HIGH_ALTITUDE_FUEL_RANGE = (18.0, 30.0)
+    CURRICULUM_HIGH_ALTITUDE_RANGE = (220.0, 320.0)
+    CURRICULUM_HIGH_ALTITUDE_VELOCITY_RANGE = (-10.0, 5.0)
+    CURRICULUM_HIGH_ALTITUDE_FUEL_RANGE = (20.0, 30.0)
 
     def __init__(self, render_mode=None, scenario=None):
         """
@@ -126,8 +134,15 @@ class RocketLandingEnv(gym.Env):
             self.LOW_FUEL_EPISODE_PROB_START
             + progress * (self.LOW_FUEL_EPISODE_PROB - self.LOW_FUEL_EPISODE_PROB_START)
         )
+        high_altitude_probability = (
+            self.HIGH_ALTITUDE_EPISODE_PROB_START
+            + progress
+            * (self.HIGH_ALTITUDE_EPISODE_PROB - self.HIGH_ALTITUDE_EPISODE_PROB_START)
+        )
 
-        if self.np_random.random() < low_fuel_probability:
+        episode_draw = self.np_random.random()
+
+        if episode_draw < low_fuel_probability:
             altitude = self.np_random.uniform(
                 *self._interpolate_range(
                     self.CURRICULUM_LOW_FUEL_ALTITUDE_RANGE,
@@ -146,6 +161,30 @@ class RocketLandingEnv(gym.Env):
                 *self._interpolate_range(
                     self.CURRICULUM_LOW_FUEL_RANGE,
                     self.LOW_FUEL_RANGE,
+                    progress,
+                )
+            )
+            return altitude, velocity, fuel
+
+        if episode_draw < low_fuel_probability + high_altitude_probability:
+            altitude = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_HIGH_ALTITUDE_RANGE,
+                    self.HIGH_ALTITUDE_RANGE,
+                    progress,
+                )
+            )
+            velocity = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_HIGH_ALTITUDE_VELOCITY_RANGE,
+                    self.HIGH_ALTITUDE_VELOCITY_RANGE,
+                    progress,
+                )
+            )
+            fuel = self.np_random.uniform(
+                *self._interpolate_range(
+                    self.CURRICULUM_HIGH_ALTITUDE_FUEL_RANGE,
+                    self.HIGH_ALTITUDE_FUEL_RANGE,
                     progress,
                 )
             )
