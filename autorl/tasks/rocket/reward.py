@@ -39,7 +39,8 @@ def compute_terminal_reward(
 
     if altitude <= 0:
         if abs(velocity) < safe_velocity:
-            return 100.0
+            softness_margin = 1.0 - (abs(velocity) / safe_velocity)
+            return 100.0 + (20.0 * softness_margin)
         return -100.0 * (abs(velocity) / safe_velocity)
 
     if altitude > max_altitude:
