@@ -8,6 +8,7 @@ def compute_shaping_reward(
     velocity: float,
     safe_velocity: float,
     max_altitude: float,
+    throttle: float,
 ) -> float:
     """Dense shaping reward used during descent."""
 
@@ -20,12 +21,14 @@ def compute_shaping_reward(
     descent_speed = max(-velocity, 0.0)
     excess_landing_speed = max(descent_speed - safe_velocity, 0.0)
     flare_window = max(1.0 - (clipped_altitude / 120.0), 0.0)
+    fuel_efficiency_penalty = altitude_ratio * throttle
 
     return (
         -0.03 * velocity_error
         - 0.002 * clipped_altitude
         - 0.02 * rising_penalty
         - 0.05 * flare_window * excess_landing_speed
+        - 0.015 * fuel_efficiency_penalty
     )
 
 

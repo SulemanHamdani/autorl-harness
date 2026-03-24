@@ -224,6 +224,7 @@ class RocketLandingEnv(gym.Env):
             velocity=self.v,
             safe_velocity=self.safe_velocity,
             max_altitude=self.max_altitude,
+            throttle=throttle,
         )
         terminated = False
         truncated = False
