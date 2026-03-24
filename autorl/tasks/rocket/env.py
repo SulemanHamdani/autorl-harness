@@ -49,7 +49,7 @@ class RocketLandingEnv(gym.Env):
     LOW_FUEL_RANGE = (5.0, 12.0)
     CURRICULUM_LOW_FUEL_ALTITUDE_RANGE = (60.0, 180.0)
     CURRICULUM_LOW_FUEL_VELOCITY_RANGE = (-8.0, 0.0)
-    CURRICULUM_LOW_FUEL_RANGE = (5.0, 12.0)
+    CURRICULUM_LOW_FUEL_RANGE = (8.0, 18.0)
 
     def __init__(self, render_mode=None, scenario=None):
         """
