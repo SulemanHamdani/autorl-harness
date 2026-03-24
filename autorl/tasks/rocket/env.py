@@ -38,6 +38,10 @@ class RocketLandingEnv(gym.Env):
     ALTITUDE_RANGE = (10.0, 490.0)
     VELOCITY_RANGE = (-30.0, 10.0)
     FUEL_RANGE = (5.0, 30.0)
+    LOW_FUEL_EPISODE_PROB = 0.35
+    LOW_FUEL_ALTITUDE_RANGE = (50.0, 400.0)
+    LOW_FUEL_VELOCITY_RANGE = (-12.0, 2.0)
+    LOW_FUEL_RANGE = (5.0, 12.0)
 
     def __init__(self, render_mode=None, scenario=None):
         """
@@ -84,9 +88,7 @@ class RocketLandingEnv(gym.Env):
             self.v = float(self.scenario["velocity"])
             self.fuel = float(self.scenario["fuel"])
         else:
-            self.z = self.np_random.uniform(*self.ALTITUDE_RANGE)
-            self.v = self.np_random.uniform(*self.VELOCITY_RANGE)
-            self.fuel = self.np_random.uniform(*self.FUEL_RANGE)
+            self.z, self.v, self.fuel = self._sample_training_state()
 
         self.mass = self.dry_mass + self.fuel
         self.steps = 0
@@ -95,6 +97,20 @@ class RocketLandingEnv(gym.Env):
             self.render()
 
         return self._get_obs(), {}
+
+    def _sample_training_state(self):
+        """Bias a fraction of training episodes toward the low-fuel regime."""
+
+        if self.np_random.random() < self.LOW_FUEL_EPISODE_PROB:
+            altitude = self.np_random.uniform(*self.LOW_FUEL_ALTITUDE_RANGE)
+            velocity = self.np_random.uniform(*self.LOW_FUEL_VELOCITY_RANGE)
+            fuel = self.np_random.uniform(*self.LOW_FUEL_RANGE)
+            return altitude, velocity, fuel
+
+        altitude = self.np_random.uniform(*self.ALTITUDE_RANGE)
+        velocity = self.np_random.uniform(*self.VELOCITY_RANGE)
+        fuel = self.np_random.uniform(*self.FUEL_RANGE)
+        return altitude, velocity, fuel
 
     def step(self, action):
         throttle = float(np.clip(np.asarray(action, dtype=np.float32).item(), 0.0, 1.0))

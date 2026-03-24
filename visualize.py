@@ -12,14 +12,16 @@ Controls:
 import math
 import random
 import sys
+from pathlib import Path
 
-from bootstrap import bootstrap_autorl_paths
 import pygame
 from stable_baselines3 import PPO
 
-bootstrap_autorl_paths()
+# Add the task directory to sys.path so env.py / reward.py can be imported
+task_dir = Path(__file__).resolve().parent / "autorl" / "tasks" / "rocket"
+sys.path.insert(0, str(task_dir))
 
-from tasks.rocket.env import RocketLandingEnv
+from env import RocketLandingEnv
 
 # ── colours ──────────────────────────────────────────────────────────
 BLACK = (0, 0, 0)
@@ -47,7 +49,7 @@ GROUND_Y = HEIGHT - 80  # pixel y of the ground line
 MAX_ALT_PX = GROUND_Y - 60  # pixels available for altitude range
 
 # how many env altitude metres fit on screen
-VIEW_ALT = 300.0
+VIEW_ALT = 500.0
 
 
 def alt_to_y(z: float) -> int:
@@ -118,7 +120,7 @@ def draw_ground(surface):
         pygame.draw.rect(surface, HUD_YELLOW, (mx, GROUND_Y - pad_h // 2 + 1, 10, pad_h - 2))
 
 
-def draw_rocket(surface, rx, ry, thrusting):
+def draw_rocket(surface, rx, ry, throttle):
     # body
     body_w, body_h = 20, 50
     body_rect = pygame.Rect(rx - body_w // 2, ry - body_h, body_w, body_h)
@@ -151,8 +153,8 @@ def draw_rocket(surface, rx, ry, thrusting):
     pygame.draw.rect(surface, GREY, (rx - nozzle_w // 2, ry, nozzle_w, 5))
 
     # flame glow when thrusting
-    if thrusting:
-        flame_len = random.randint(18, 35)
+    if throttle > 0.05:
+        flame_len = int(random.randint(18, 35) * throttle)
         flame_pts = [
             (rx - 6, ry + 5),
             (rx + 6, ry + 5),
@@ -191,7 +193,7 @@ def draw_hud(surface, font, z, v, fuel, mass, step, episode, total_reward, statu
     # fuel bar
     bar_x, bar_y, bar_w, bar_h = WIDTH - 40, 60, 16, 200
     pygame.draw.rect(surface, GREY, (bar_x - 1, bar_y - 1, bar_w + 2, bar_h + 2))
-    fuel_frac = fuel / 20.0
+    fuel_frac = fuel / 30.0
     fuel_color = HUD_GREEN if fuel_frac > 0.3 else HUD_YELLOW if fuel_frac > 0.1 else HUD_RED
     fill_h = int(bar_h * fuel_frac)
     pygame.draw.rect(surface, fuel_color, (bar_x, bar_y + bar_h - fill_h, bar_w, fill_h))
@@ -225,8 +227,13 @@ def main():
     draw_ground(sky_surface)
     stars = make_stars()
 
+    model_path = task_dir / "model.zip"
+    if not model_path.exists():
+        print(f"No model found at {model_path}. Run training first.")
+        sys.exit(1)
+
     env = RocketLandingEnv()
-    model = PPO.load("rocket_ppo_v2")
+    model = PPO.load(str(model_path))
 
     episode = 0
     running = True
@@ -236,11 +243,10 @@ def main():
         episode += 1
         obs, info = env.reset()
         total_reward = 0.0
-        boost_steps = 50  # forced thrust for this many steps before agent takes over
         done = False
         status = ""
         particles = []
-        last_action = 0
+        last_throttle = 0.0
 
         while not done and running:
             # ── events ───────────────────────────────────────────────
@@ -257,24 +263,22 @@ def main():
                 break
 
             # ── agent step ───────────────────────────────────────────
-            if env.steps < boost_steps:
-                action = 1  # forced thrust during boost phase
-            else:
-                action, _ = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += reward
             done = terminated or truncated
-            last_action = int(action)
+            last_throttle = float(action[0]) if hasattr(action, '__len__') else float(action)
 
-            z, v, fuel, mass = obs
+            # Use physical state for display
+            z, v, fuel, mass = env.z, env.v, env.fuel, env.mass
 
             # ── rocket screen position ───────────────────────────────
             rx = WIDTH // 2
             ry = alt_to_y(z)
 
             # ── particles ────────────────────────────────────────────
-            if last_action == 1 and fuel > 0:
-                for _ in range(3):
+            if last_throttle > 0.05 and fuel > 0:
+                for _ in range(int(3 * last_throttle)):
                     particles.append(Particle(rx + random.randint(-4, 4), ry + 5))
 
             particles = [p for p in particles if p.life > 0]
@@ -299,7 +303,7 @@ def main():
             for p in particles:
                 p.draw(screen)
 
-            draw_rocket(screen, rx, ry, last_action == 1 and fuel > 0)
+            draw_rocket(screen, rx, ry, last_throttle)
             draw_hud(screen, font, z, v, fuel, mass, env.steps, episode,
                      total_reward, status if done else "")
 
@@ -326,7 +330,7 @@ def main():
             draw_stars(screen, stars)
             for p in particles:
                 p.draw(screen)
-            draw_rocket(screen, rx, ry, False)
+            draw_rocket(screen, rx, ry, 0.0)
             draw_hud(screen, font, z, v, fuel, mass, env.steps, episode,
                      total_reward, status)
             pygame.display.flip()
