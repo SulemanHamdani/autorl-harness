@@ -21,7 +21,9 @@ def compute_shaping_reward(
     descent_speed = max(-velocity, 0.0)
     excess_landing_speed = max(descent_speed - safe_velocity, 0.0)
     flare_window = max(1.0 - (clipped_altitude / 120.0), 0.0)
-    fuel_efficiency_penalty = altitude_ratio * throttle
+    # Penalize wasteful hovering near touchdown without discouraging
+    # corrective burns from high altitude.
+    fuel_efficiency_penalty = flare_window * throttle
 
     return (
         -0.03 * velocity_error
