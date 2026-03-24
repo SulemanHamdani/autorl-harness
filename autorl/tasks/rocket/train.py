@@ -24,7 +24,7 @@ from env import RocketLandingEnv
 
 # ---- configuration ----
 
-TOTAL_TIMESTEPS = 750_000
+TOTAL_TIMESTEPS = 1_250_000
 SEED = 0
 
 HYPERPARAMETERS = {
