@@ -17,8 +17,16 @@ def compute_shaping_reward(
     target_velocity = -target_speed
     velocity_error = abs(velocity - target_velocity)
     rising_penalty = max(velocity, 0.0)
+    descent_speed = max(-velocity, 0.0)
+    excess_landing_speed = max(descent_speed - safe_velocity, 0.0)
+    flare_window = max(1.0 - (clipped_altitude / 120.0), 0.0)
 
-    return -0.03 * velocity_error - 0.002 * clipped_altitude - 0.02 * rising_penalty
+    return (
+        -0.03 * velocity_error
+        - 0.002 * clipped_altitude
+        - 0.02 * rising_penalty
+        - 0.05 * flare_window * excess_landing_speed
+    )
 
 
 def compute_terminal_reward(
