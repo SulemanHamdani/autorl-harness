@@ -4,7 +4,7 @@ A minimal autonomous RL experiment loop. Each iteration, an LLM agent reads your
 
 Inspired by Karpathy's auto-research work. The main difference is that each LLM call is a fresh session rather than one long conversation. This matters for RL because training runs can take 5-20+ minutes per iteration — long sessions eventually timeout or lose context. Here, the full context (file contents, results history, last run log) is injected fresh each call.
 
-The harness is task-agnostic. It reads a `spec.yaml` to know what command to run, which files the LLM can edit, and which metric to track. The LLM never runs training itself — it only edits code.
+The harness is task-agnostic. It reads a `spec.yaml` to know what command to run, which files the LLM can edit, and which metric to track.
 
 ---
 
@@ -63,7 +63,7 @@ editable_files:
 primary_score: your_metric_name
 ```
 
-`run_command` can be any shell command. The editable files can live anywhere in the repo — just list their paths relative to the repo root.
+`run_command` can be any shell command. The editable files can live anywhere in the repo, you'll have to list their paths relative to the repo root.
 
 ### The metrics.json contract
 
@@ -108,7 +108,7 @@ The LLM reads this every iteration. It can see the trajectory of experiments and
 
 ## Example: rocket landing
 
-The included `tasks/rocket/` task trains a PPO agent (via stable-baselines3) to land a 1D rocket softly across 15 evaluation scenarios. Initial conditions vary across altitude (15-490m), velocity (up to -30 m/s), and fuel (as low as 5kg). The agent must generalize across all of them — not just the easy cases.
+The included `tasks/rocket/` task trains a PPO agent (via stable-baselines3) to land a 1D rocket softly across 15 evaluation scenarios. Initial conditions vary across altitude (15-490m), velocity (up to -30 m/s), and fuel (as low as 5kg). The agent must generalize across all of them.
 
 Starting from a 33% soft landing rate, the LLM reached 100% across all 15 scenarios in 20 experiments. The changes it made across those experiments: observation normalization, curriculum learning with a gradually widening training distribution, a low-fuel training bias so the agent sees constrained scenarios more often, and altitude-aware reward shaping with a flare window penalty near touchdown. None of that was in the initial code.
 
