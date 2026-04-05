@@ -1,5 +1,7 @@
 # AutoRL Harness
 
+![AutoRL rocket landing demo](autorl-rocket.gif)
+
 A minimal autonomous RL experiment loop. Each iteration, an LLM agent reads your task description, experiment history, and current code, edits files to improve a target metric, and exits. The loop handles training, git commits, and logging. Repeat for N iterations.
 
 Inspired by Karpathy's auto-research work. The main difference is that each LLM call is a fresh session rather than one long conversation. This matters for RL because training runs can take 5-20+ minutes per iteration — long sessions eventually timeout or lose context. Here, the full context (file contents, results history, last run log) is injected fresh each call.
